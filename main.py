@@ -14,9 +14,11 @@ def write_image(imagesrc) -> None:
     fpath = os.path.join(cwd, *imagesrc.split('/'))
     print("file to write: ", fpath)
     timeout_delay = 5
+    retries = 0
+
     while True:
         try:
-            print("Requesting URL: https://brickshelf.com", imagesrc)
+            print("Requesting URL: https://brickshelf.com", imagesrc.strip(" "))
             r = requests.get("https://brickshelf.com" +
                              imagesrc, stream=True, timeout=timeout_delay)
             r.raise_for_status()
@@ -27,10 +29,16 @@ def write_image(imagesrc) -> None:
         except requests.exceptions.HTTPError as errh:
             print("HTTP Error")
             print(errh.args[0])
+            retries += 1
+            if retries > 5:
+                print("failed to download file. Skipping...")
+                return
         except requests.exceptions.ConnectionError as conerr:
             print("Connection error: ", conerr)
         except requests.exceptions.RequestException as err:
             print("General Error???", err, "Retrying...")
+
+        time.sleep(timeout_delay)
         timeout_delay += 5
 
     length = int(r.headers['Content-length'])
@@ -102,7 +110,7 @@ def get_folders(soup: BeautifulSoup):
     folders = []
     for a in soup.find_all('a'):
         link = a["href"]
-        if "/cgi-bin/gallery.cgi?f=" in link and a.string != 'UP':
+        if "/cgi-bin/gallery.cgi?f=" in link and str(a.string).lower() != 'up' and str(a.string).lower() != 'previous':
             folders.append("https://brickshelf.com" + link)
     return folders
 
